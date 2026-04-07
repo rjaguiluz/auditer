@@ -1,13 +1,21 @@
 {
-  "name": "fix-libs",
+  "name": "auditer",
   "version": "0.1.0",
-  "description": "CLI to uninstall libs, run npm audit fix, and reinstall respecting dev/prod",
+  "description": "CLI para auditar y corregir vulnerabilidades en proyectos Node.js con Trivy y npm audit",
   "bin": {
-    "fix-libs": "bin/fix-libs.js"
+    "auditer": "bin/auditer.js"
   },
   "author": "",
   "license": "MIT",
   "engines": {
     "node": ">=12"
-  }
+  },
+  "keywords": [
+    "security",
+    "audit",
+    "vulnerabilities",
+    "trivy",
+    "npm",
+    "cve"
+  ]
 }
