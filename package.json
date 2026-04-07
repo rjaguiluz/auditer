@@ -1,0 +1,13 @@
+{
+  "name": "fix-libs",
+  "version": "0.1.0",
+  "description": "CLI to uninstall libs, run npm audit fix, and reinstall respecting dev/prod",
+  "bin": {
+    "fix-libs": "bin/fix-libs.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=12"
+  }
+}
