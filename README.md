@@ -11,8 +11,9 @@ CLI inteligente para auditar y corregir vulnerabilidades en proyectos Node.js us
 - ⚠️ **Confirmación interactiva**: Pregunta antes de aplicar overrides que puedan romper código
 - 🎯 **Modo --exact**: Instala versiones exactas sin `^`
 - 🔬 **Modo --trivy**: Solo análisis y corrección de CVEs (sin tocar otros paquetes)
+- 🧹 **Modo --clean**: Detecta y elimina dependencias no utilizadas
 - 🔇 **Modo --silent**: Suprime salida de npm para output limpio
-- � **Gestión de versiones**: --replace-exact, --up-minor, --up-major
+- 🔧 **Gestión de versiones**: --replace-exact, --up-minor, --up-major
 - 📊 **Resumen automático**: Muestra reporte conciso de todos los cambios realizados
 - 🗂️ **Arquitectura modular**: Código organizado en módulos independientes y testeables
 
@@ -86,6 +87,29 @@ auditer --up-major
 auditer --up-major lodash moment        # Solo paquetes específicos
 ```
 
+### Limpieza de dependencias no utilizadas
+
+```bash
+# Detectar y eliminar dependencias no utilizadas (solo producción)
+auditer --clean
+
+# Incluir también devDependencies en el análisis (⚠️ puede tener falsos positivos)
+auditer --clean --include-dev
+```
+
+El modo `--clean`:
+- Escanea todos los archivos del proyecto (`.js`, `.jsx`, `.ts`, `.tsx`)
+- Detecta qué paquetes realmente se importan o requieren
+- **Por defecto solo analiza `dependencies` de producción**
+- **Excluye `devDependencies`** (typescript, jest, eslint, etc. no se importan directamente)
+- **Excluye automáticamente paquetes `@types/*`** (son de tipos, no de código)
+- Muestra un listado de dependencias no utilizadas
+- Te pregunta antes de eliminarlas
+
+**Usar `--include-dev` con precaución**: Las devDependencies incluyen herramientas CLI (typescript, jest, eslint) que no se importan en el código pero se usan en scripts de package.json y archivos de configuración. El análisis estático puede generar falsos positivos.
+
+**Nota**: Este análisis es estático y puede tener falsos positivos si usas imports dinámicos complejos o dependencias que solo se usan en configuración.
+
 ## Flujos de trabajo 🔄
 
 ### Modo normal (`auditer <paquetes>`)
@@ -107,11 +131,26 @@ auditer --up-major lodash moment        # Solo paquetes específicos
 5. Propone overrides solo para subdependencias (con confirmación)
 6. Verifica resultado final
 
+### Modo Clean (`auditer --clean`)
+
+1. Escanea recursivamente todos los archivos del proyecto
+2. Detecta imports/requires en el código fuente
+3. Compara con dependencies en package.json (devDependencies excluidas por defecto)
+4. Lista paquetes no utilizados (excluyendo @types/*)
+5. Pregunta si deseas eliminarlos
+6. Desinstala los paquetes confirmados
+
+**Nota**: Por defecto solo analiza `dependencies` de producción. Las `devDependencies` (typescript, jest, eslint, prettier, etc.) se excluyen porque son herramientas CLI que no se importan directamente. Usa `--include-dev` si deseas incluirlas (puede generar falsos positivos).
+
 ## Flags disponibles 🎛️
 
 ### Modos de ejecución
 - `--trivy`: Modo análisis: solo procesa paquetes con CVEs detectados por Trivy
+- `--clean`: Modo limpieza: detecta y elimina dependencias de producción no utilizadas
+- `--include-dev`: Incluye devDependencies en el análisis --clean (⚠️ puede tener falsos positivos)
+- `--dry-run`: Modo simulación: muestra qué cambios haría sin ejecutarlos (preview seguro)
 - `--silent`: Suprime la salida de npm, muestra solo mensajes del script
+- `--yes` / `-y` / `--force`: No pide confirmaciones, asume "sí" en todas (útil para CI/CD)
 
 ### Instalación
 - `--exact`: Instala versiones exactas sin el prefijo `^`
@@ -133,6 +172,21 @@ auditer '/^@babel/'
 # Análisis de seguridad completo
 auditer --trivy
 
+# 🎭 Ver qué haría el análisis de seguridad SIN ejecutarlo (preview seguro)
+auditer --trivy --dry-run
+
+# Limpiar dependencias no utilizadas
+auditer --clean
+
+# 🎭 Ver qué dependencias eliminaría sin borrarlas
+auditer --clean --dry-run
+
+# Limpiar incluyendo devDependencies (⚠️ cuidado con falsos positivos)
+auditer --clean --include-dev
+
+# Modo no interactivo
+auditer --clean --yes
+
 # Reinstalar todo con versiones exactas
 auditer --exact
 
@@ -142,8 +196,47 @@ auditer --trivy --exact
 # Modo silencioso (sin output de npm)
 auditer --silent --trivy
 
+# Modo no interactivo (sin confirmaciones) - útil para CI/CD
+auditer --trivy --yes
+auditer --trivy -y --silent
+auditer --clean --yes  # Eliminar dependencias sin confirmar
+
+# 🎭 Ver qué actualizaciones major haría (breaking changes) sin ejecutarlas
+auditer --up-major --dry-run
+
+# 🎭 Previsualizar análisis en modo silencioso
+auditer --trivy --silent --dry-run
+
+# Actualizar familia de paquetes sin confirmaciones
+auditer '/^@nestjs/' --yes
+
+# 🎭 CI/CD: Verificar vulnerabilidades sin arreglarlas (para reportes)
+auditer --trivy --dry-run || echo "⚠️ Vulnerabilidades detectadas"
+
 # Combinando todos los flags
-auditer --trivy --exact --silent
+auditer --trivy --exact --silent --yes
+```
+
+### Casos de uso de --dry-run
+
+**1. Explorar proyecto nuevo:**
+```bash
+cd nuevo-proyecto
+auditer --trivy --dry-run
+# Ver qué vulnerabilidades tiene sin tocar nada
+```
+
+**2. Comparar estrategias:**
+```bash
+auditer --up-minor --dry-run > minor-changes.txt
+auditer --up-major --dry-run > major-changes.txt
+# Comparar archivos y decidir
+```
+
+**3. Validación en CI/CD:**
+```bash
+# Fallar build si hay vulnerabilidades HIGH/CRITICAL
+auditer --trivy --dry-run
 ```
 
 ## Overrides 📝

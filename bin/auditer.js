@@ -4,11 +4,11 @@
 // AUDITER - NPM Package Auditing and Fixing Tool
 // ============================================================================
 
-const { setSilentMode } = require('../lib/state');
+const { setSilentMode, setAssumeYes, setDryRun } = require('../lib/state');
 const { displayChangeSummary, die } = require('../lib/utils');
 const { readPackageJson } = require('../lib/package-manager');
 const { parseArguments, parsePackagePatterns, matchPackages } = require('../lib/cli-parser');
-const { runTrivyMode, runNormalMode } = require('../lib/modes');
+const { runTrivyMode, runNormalMode, runCleanMode } = require('../lib/modes');
 const { replaceWithExactVersions, updateToMinorVersions, updateToMajorVersions } = require('../lib/version-manager');
 
 // ============================================================================
@@ -16,9 +16,11 @@ const { replaceWithExactVersions, updateToMinorVersions, updateToMajorVersions }
 // ============================================================================
 
 async function main() {
-  const { useExact, onlyTrivy, silent, replaceExact, upMinor, upMajor, filteredArgs } = parseArguments();
+  const { useExact, onlyTrivy, silent, replaceExact, upMinor, upMajor, assumeYes, clean, includeDev, dryRun, filteredArgs } = parseArguments();
   
   setSilentMode(silent);
+  setAssumeYes(assumeYes);
+  setDryRun(dryRun);
   
   const pkgJson = readPackageJson();
   
@@ -30,18 +32,29 @@ async function main() {
   if (silent) {
     console.log('🔇 Modo --silent activado: salida de npm suprimida');
   }
+  if (assumeYes) {
+    console.log('✅ Modo --yes activado: se asumirá "sí" en todas las confirmaciones');
+  }
+  if (dryRun) {
+    console.log('\n' + '='.repeat(60));
+    console.log('🎭 DRY-RUN MODE: Simulación sin ejecutar cambios reales');
+    console.log('='.repeat(60));
+    console.log('ℹ️  Se mostrará qué haría la herramienta, pero NO se ejecutará');
+    console.log('ℹ️  Para ejecutar los cambios, quita el flag --dry-run\n');
+  }
   
   try {
+    // Handle clean mode
+    if (clean) {
+      await runCleanMode(pkgJson, includeDev);
+      return; // Exit after cleaning
+    }
+    
     // Handle version management modes
     if (replaceExact || upMinor || upMajor) {
       const patterns = parsePackagePatterns(filteredArgs);
       const allNames = [...deps, ...devDeps];
       const matched = matchPackages(patterns, allNames);
-      
-      if (processAll && !replaceExact && !upMinor && !upMajor) {
-        console.log('No se especificaron librerías ni modos de actualización.');
-        return;
-      }
       
       if (replaceExact) {
         console.log('📌 Modo --replace-exact activado');
@@ -96,7 +109,15 @@ async function main() {
     
     displayChangeSummary();
     
-    console.log('\nListo. Paquetes procesados.');
+    if (dryRun) {
+      console.log('\n' + '='.repeat(60));
+      console.log('🎭 DRY-RUN COMPLETADO');
+      console.log('='.repeat(60));
+      console.log('✅ Simulación finalizada. Ningún cambio fue aplicado.');
+      console.log('💡 Para ejecutar estos cambios, ejecuta el mismo comando sin --dry-run\n');
+    } else {
+      console.log('\nListo. Paquetes procesados.');
+    }
   } catch (err) {
     die(err.message || String(err));
   }
