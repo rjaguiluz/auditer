@@ -209,5 +209,13 @@
   },
   "analyzer": {
     "lock_read_error": "No se pudo leer package-lock.json, usando versiones por defecto"
+  },
+  "husky": {
+    "title": "\n🐕 Modo --husky: Gatekeeper estricto (solo lectura)\n",
+    "scanning": "📊 Escaneando con Trivy...\n",
+    "no_trivy": "⚠️  No se pudo ejecutar Trivy. El commit continuará.",
+    "no_vulnerabilities": "✅ No se encontraron vulnerabilidades. ¡Commit permitido!\n",
+    "vulns_detected": "❌ ¡VULNERABILIDADES DETECTADAS! Commit abortado.\n",
+    "fix_suggestion": "💡 Para arreglar estas vulnerabilidades, ejecuta `auditer --trivy` o `auditer -r --trivy`"
   }
 }

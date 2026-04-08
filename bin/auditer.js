@@ -8,7 +8,7 @@ const { setSilentMode, setAssumeYes, setDryRun } = require('../lib/state');
 const { displayChangeSummary, die } = require('../lib/utils');
 const { readPackageJson } = require('../lib/package-manager');
 const { parseArguments, parsePackagePatterns, matchPackages } = require('../lib/cli-parser');
-const { runTrivyMode, runNormalMode, runCleanMode, runAuditMode } = require('../lib/modes');
+const { runTrivyMode, runNormalMode, runCleanMode, runAuditMode, runHuskyMode } = require('../lib/modes');
 const { replaceWithExactVersions, updateToMinorVersions, updateToMajorVersions } = require('../lib/version-manager');
 const { t } = require('../lib/i18n');
 const { findWorkspaces } = require('../lib/workspace');
@@ -18,13 +18,18 @@ const { resetChangesTracker } = require('../lib/state');
 // MAIN
 // ============================================================================
 
-async function runWorkspaceLogic({ useExact, onlyTrivy, silent, replaceExact, upMinor, upMajor, assumeYes, clean, includeDev, dryRun, audit, filteredArgs }) {
+async function runWorkspaceLogic({ useExact, onlyTrivy, silent, replaceExact, upMinor, upMajor, assumeYes, clean, includeDev, dryRun, audit, husky, filteredArgs }) {
   const pkgJson = readPackageJson();
 
   const deps = new Set(Object.keys(pkgJson.dependencies || {}));
   const devDeps = new Set(Object.keys(pkgJson.devDependencies || {}));
 
   const processAll = !filteredArgs.length;
+
+  if (husky) {
+    await runHuskyMode(useExact, deps, devDeps);
+    return;
+  }
 
   if (audit) {
     await runAuditMode();

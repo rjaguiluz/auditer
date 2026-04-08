@@ -14,6 +14,8 @@ Smart CLI to audit and fix vulnerabilities in Node.js projects using Trivy and n
 - 🔬 **--trivy mode**: Only CVE analysis and fixes (leaves other packages untouched)
 - 🧹 **--clean mode**: Detects and removes unused dependencies
 - 🔇 **--silent mode**: Suppresses npm output for cleaner logs
+- ♻️ **Monorepo Support**: Use `--recursive` (`-r`) to automatically audit all nested workspaces
+- 🐕 **Gatekeeper Mode**: Use `--husky` in your Git hooks to STRICTLY prevent vulnerable commits
 - 🔧 **Version management**: --replace-exact, --up-minor, --up-major
 - 📊 **Auto summary**: Shows a concise report of all changes made
 - 🗂️ **Modular architecture**: Code organized in independent, testable modules
@@ -158,6 +160,8 @@ The `--clean` mode:
 - `--trivy`: Analysis mode: only processes packages with CVEs detected by Trivy
 - `--clean`: Clean mode: detects and removes unused production dependencies
 - `--include-dev`: Includes devDependencies in the --clean analysis (⚠️ may have false positives)
+- `--recursive` / `-r`: Scans the entire project tree detecting nested `package.json` workspaces
+- `--husky`: Strict gatekeeper mode for CI/CD or Git hooks. Aborts (Exit 1) if vulnerabilities are found
 - `--dry-run`: Simulation mode: shows what changes would be made without executing them (safe preview)
 - `--silent`: Suppresses npm output, shows only script messages
 - `--yes` / `-y` / `--force`: No confirmations, assumes "yes" to all (useful for CI/CD)
@@ -225,6 +229,12 @@ auditer '/^@nestjs/' --yes
 
 # 🎭 CI/CD: Check vulnerabilities without fixing them (for reports)
 auditer --trivy --dry-run || echo "⚠️ Vulnerabilities detected"
+
+# 📦 Scan an entire monorepo automatically navigating to sub-packages
+auditer -r --trivy --silent
+
+# 🐕 Use in Git pre-commit hook or CI pipeline to reject problematic code
+auditer --husky
 
 # Combining all flags
 auditer --trivy --exact --silent --yes

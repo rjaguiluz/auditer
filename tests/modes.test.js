@@ -50,7 +50,7 @@ const { runTrivyScan, extractTrivyVulnerabilities } = require('../lib/trivy');
 const { getCurrentVersions } = require('../lib/dependency-analyzer');
 const { uninstallPackages, runAuditFix, installPackages } = require('../lib/package-processor');
 const { processVulnerabilities } = require('../lib/vulnerability-fixer');
-const { runTrivyMode, runNormalMode, runCleanMode, runAuditMode } = require('../lib/modes');
+const { runTrivyMode, runNormalMode, runCleanMode, runAuditMode, runHuskyMode } = require('../lib/modes');
 
 describe('modes.js', () => {
   let consoleSpy;
@@ -276,4 +276,41 @@ describe('modes.js', () => {
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('audit.vulns_detected'));
     });
   });
+
+  // ===== runHuskyMode =====
+  describe('runHuskyMode()', () => {
+    let exitSpy;
+
+    beforeEach(() => {
+      exitSpy = jest.spyOn(process, 'exit').mockImplementation();
+    });
+
+    afterEach(() => {
+      exitSpy.mockRestore();
+    });
+
+    test('returns gracefully when trivy scan is null', async () => {
+      runTrivyScan.mockReturnValue(null);
+      await runHuskyMode();
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('husky.no_trivy'));
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    test('returns gracefully when no vulnerabilities found', async () => {
+      runTrivyScan.mockReturnValue({ Results: [] });
+      extractTrivyVulnerabilities.mockReturnValue({ all: {} });
+      await runHuskyMode();
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('husky.no_vulnerabilities'));
+      expect(exitSpy).not.toHaveBeenCalled();
+    });
+
+    test('exits with 1 when vulnerabilities exist', async () => {
+      runTrivyScan.mockReturnValue({ Results: [] });
+      extractTrivyVulnerabilities.mockReturnValue({ all: { lodash: '4.17.21' } });
+      await runHuskyMode();
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('husky.vulns_detected'));
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+  });
 });
+
