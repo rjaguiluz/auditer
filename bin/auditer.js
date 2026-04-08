@@ -11,18 +11,14 @@ const { parseArguments, parsePackagePatterns, matchPackages } = require('../lib/
 const { runTrivyMode, runNormalMode, runCleanMode, runAuditMode } = require('../lib/modes');
 const { replaceWithExactVersions, updateToMinorVersions, updateToMajorVersions } = require('../lib/version-manager');
 const { t } = require('../lib/i18n');
+const { findWorkspaces } = require('../lib/workspace');
+const { resetChangesTracker } = require('../lib/state');
 
 // ============================================================================
 // MAIN
 // ============================================================================
 
-async function main() {
-  const { useExact, onlyTrivy, silent, replaceExact, upMinor, upMajor, assumeYes, clean, includeDev, dryRun, audit, filteredArgs } = parseArguments();
-
-  setSilentMode(silent);
-  setAssumeYes(assumeYes);
-  setDryRun(dryRun);
-
+async function runWorkspaceLogic({ useExact, onlyTrivy, silent, replaceExact, upMinor, upMajor, assumeYes, clean, includeDev, dryRun, audit, filteredArgs }) {
   const pkgJson = readPackageJson();
 
   const deps = new Set(Object.keys(pkgJson.dependencies || {}));
@@ -30,12 +26,74 @@ async function main() {
 
   const processAll = !filteredArgs.length;
 
-  if (silent) {
-    console.log(t('startup.silent_mode'));
+  if (audit) {
+    await runAuditMode();
+    return;
   }
-  if (assumeYes) {
-    console.log(t('startup.assume_yes'));
+
+  if (clean) {
+    await runCleanMode(pkgJson, includeDev);
+    return;
   }
+
+  if (replaceExact || upMinor || upMajor) {
+    const patterns = parsePackagePatterns(filteredArgs);
+    const allNames = [...deps, ...devDeps];
+    const matched = matchPackages(patterns, allNames);
+
+    if (replaceExact) {
+      console.log(t('startup.mode_replace_exact'));
+      if (!processAll) {
+        console.log(t('startup.processing_packages', { packages: [...matched].join(', ') }));
+      } else {
+        console.log(t('startup.processing_all'));
+      }
+      await replaceWithExactVersions(matched, deps, devDeps);
+    } else if (upMinor) {
+      console.log(t('startup.mode_up_minor'));
+      if (!processAll) {
+        console.log(t('startup.processing_packages', { packages: [...matched].join(', ') }));
+      } else {
+        console.log(t('startup.processing_all'));
+      }
+      await updateToMinorVersions(matched, deps, devDeps);
+    } else if (upMajor) {
+      console.log(t('startup.mode_up_major'));
+      if (!processAll) {
+        console.log(t('startup.processing_packages', { packages: [...matched].join(', ') }));
+      } else {
+        console.log(t('startup.processing_all'));
+      }
+      await updateToMajorVersions(matched, deps, devDeps);
+    }
+  } else if (onlyTrivy) {
+    if (useExact) console.log(t('startup.mode_exact'));
+    console.log(t('startup.mode_trivy'));
+    await runTrivyMode(useExact, deps, devDeps);
+  } else {
+    if (processAll) console.log(t('startup.no_libs'));
+    if (useExact) console.log(t('startup.mode_exact'));
+
+    const patterns = parsePackagePatterns(filteredArgs);
+    const allNames = [...deps, ...devDeps];
+    const matched = matchPackages(patterns, allNames);
+
+    await runNormalMode(matched, deps, devDeps, useExact, processAll);
+  }
+
+  displayChangeSummary();
+}
+
+async function main() {
+  const options = parseArguments();
+  const { silent, assumeYes, dryRun, isRecursive } = options;
+
+  setSilentMode(silent);
+  setAssumeYes(assumeYes);
+  setDryRun(dryRun);
+
+  if (silent) console.log(t('startup.silent_mode'));
+  if (assumeYes) console.log(t('startup.assume_yes'));
   if (dryRun) {
     console.log('\n' + '='.repeat(60));
     console.log(t('startup.dryrun_banner'));
@@ -45,76 +103,38 @@ async function main() {
   }
 
   try {
-    // Handle audit mode (read-only vulnerability listing)
-    if (audit) {
-      await runAuditMode();
-      return;
-    }
+    if (isRecursive) {
+      const originalCwd = process.cwd();
+      const workspaces = findWorkspaces(originalCwd);
+      
+      if (workspaces.length === 0) {
+        console.log(`No package.json files found recursively from ${originalCwd}`);
+        return;
+      }
+      
+      console.log(`🔄 Found ${workspaces.length} workspaces. Processing recursively...\n`);
 
-    // Handle clean mode
-    if (clean) {
-      await runCleanMode(pkgJson, includeDev);
-      return;
-    }
-
-    // Handle version management modes
-    if (replaceExact || upMinor || upMajor) {
-      const patterns = parsePackagePatterns(filteredArgs);
-      const allNames = [...deps, ...devDeps];
-      const matched = matchPackages(patterns, allNames);
-
-      if (replaceExact) {
-        console.log(t('startup.mode_replace_exact'));
-        if (!processAll) {
-          console.log(t('startup.processing_packages', { packages: [...matched].join(', ') }));
-        } else {
-          console.log(t('startup.processing_all'));
+      for (const workspace of workspaces) {
+        console.log('='.repeat(60));
+        console.log(`📦 Workspace: ${workspace}`);
+        console.log('='.repeat(60));
+        
+        process.chdir(workspace);
+        resetChangesTracker();
+        
+        try {
+          await runWorkspaceLogic(options);
+        } catch (e) {
+          console.error(`Error processing workspace ${workspace}:`, e.message);
         }
-        await replaceWithExactVersions(matched, deps, devDeps);
-      } else if (upMinor) {
-        console.log(t('startup.mode_up_minor'));
-        if (!processAll) {
-          console.log(t('startup.processing_packages', { packages: [...matched].join(', ') }));
-        } else {
-          console.log(t('startup.processing_all'));
-        }
-        await updateToMinorVersions(matched, deps, devDeps);
-      } else if (upMajor) {
-        console.log(t('startup.mode_up_major'));
-        if (!processAll) {
-          console.log(t('startup.processing_packages', { packages: [...matched].join(', ') }));
-        } else {
-          console.log(t('startup.processing_all'));
-        }
-        await updateToMajorVersions(matched, deps, devDeps);
+        
+        console.log('\n');
       }
+
+      process.chdir(originalCwd);
+    } else {
+      await runWorkspaceLogic(options);
     }
-    // Handle Trivy mode
-    else if (onlyTrivy) {
-      if (useExact) {
-        console.log(t('startup.mode_exact'));
-      }
-      console.log(t('startup.mode_trivy'));
-
-      await runTrivyMode(useExact, deps, devDeps);
-    }
-    // Handle normal mode
-    else {
-      if (processAll) {
-        console.log(t('startup.no_libs'));
-      }
-      if (useExact) {
-        console.log(t('startup.mode_exact'));
-      }
-
-      const patterns = parsePackagePatterns(filteredArgs);
-      const allNames = [...deps, ...devDeps];
-      const matched = matchPackages(patterns, allNames);
-
-      await runNormalMode(matched, deps, devDeps, useExact, processAll);
-    }
-
-    displayChangeSummary();
 
     if (dryRun) {
       console.log('\n' + '='.repeat(60));
