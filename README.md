@@ -5,6 +5,7 @@ CLI inteligente para auditar y corregir vulnerabilidades en proyectos Node.js us
 ## Características ✨
 
 - 🔍 **Análisis con Trivy**: Detecta CVEs (LOW, MEDIUM, HIGH, CRITICAL) en dependencias
+- 📋 **Modo --audit**: Lista vulnerabilidades sin modificar nada (solo lectura con árbol de dependencias)
 - 🎯 **Selección inteligente de versiones**: Prioriza actualizaciones menores (patch > minor > major)
 - 📦 **Actualización de dependencias directas**: Reinstala con versiones parcheadas
 - 📝 **Overrides para subdependencias**: Aplica parches a dependencias transitivas
@@ -131,6 +132,15 @@ El modo `--clean`:
 5. Propone overrides solo para subdependencias (con confirmación)
 6. Verifica resultado final
 
+### Modo Audit (`auditer --audit`)
+
+1. Escanea con Trivy (solo lectura)
+2. Lista cada paquete vulnerable con su información
+3. Muestra árbol de dependencias con `npm list`
+4. Agrupa vulnerabilidades por severidad (CRITICAL, HIGH, MEDIUM, LOW)
+5. Muestra resumen con contadores
+6. **No modifica nada** - ideal para reportes e inspección
+
 ### Modo Clean (`auditer --clean`)
 
 1. Escanea recursivamente todos los archivos del proyecto
@@ -145,6 +155,7 @@ El modo `--clean`:
 ## Flags disponibles 🎛️
 
 ### Modos de ejecución
+- `--audit`: Modo auditoría: lista vulnerabilidades sin modificar (solo lectura con árbol de dependencias)
 - `--trivy`: Modo análisis: solo procesa paquetes con CVEs detectados por Trivy
 - `--clean`: Modo limpieza: detecta y elimina dependencias de producción no utilizadas
 - `--include-dev`: Incluye devDependencies en el análisis --clean (⚠️ puede tener falsos positivos)
@@ -168,6 +179,9 @@ auditer react
 
 # Procesar todos los paquetes de Babel
 auditer '/^@babel/'
+
+# 📋 Auditoría de vulnerabilidades (solo lectura - no modifica nada)
+auditer --audit
 
 # Análisis de seguridad completo
 auditer --trivy
@@ -215,6 +229,33 @@ auditer --trivy --dry-run || echo "⚠️ Vulnerabilidades detectadas"
 
 # Combinando todos los flags
 auditer --trivy --exact --silent --yes
+```
+
+### Casos de uso de --audit
+
+**1. Informe de seguridad sin modificar:**
+```bash
+# Generar reporte de vulnerabilidades para reunión
+auditer --audit > security-report.txt
+```
+
+**2. Inspeccionar antes de arreglar:**
+```bash
+# Ver el alcance del problema antes de ejecutar correcciones
+auditer --audit
+# Después: auditer --trivy
+```
+
+**3. CI/CD - Reportes de seguridad:**
+```bash
+# En pipeline: verificar vulnerabilidades y guardar reporte
+auditer --audit || true  # No falla el build, solo reporta
+```
+
+**4. Debugging de dependencias:**
+```bash
+# Ver árbol completo de dependencias de paquetes vulnerables
+auditer --audit | grep -A 10 "path-to-regexp"
 ```
 
 ### Casos de uso de --dry-run

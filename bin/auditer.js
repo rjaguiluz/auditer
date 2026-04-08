@@ -8,7 +8,7 @@ const { setSilentMode, setAssumeYes, setDryRun } = require('../lib/state');
 const { displayChangeSummary, die } = require('../lib/utils');
 const { readPackageJson } = require('../lib/package-manager');
 const { parseArguments, parsePackagePatterns, matchPackages } = require('../lib/cli-parser');
-const { runTrivyMode, runNormalMode, runCleanMode } = require('../lib/modes');
+const { runTrivyMode, runNormalMode, runCleanMode, runAuditMode } = require('../lib/modes');
 const { replaceWithExactVersions, updateToMinorVersions, updateToMajorVersions } = require('../lib/version-manager');
 
 // ============================================================================
@@ -16,7 +16,7 @@ const { replaceWithExactVersions, updateToMinorVersions, updateToMajorVersions }
 // ============================================================================
 
 async function main() {
-  const { useExact, onlyTrivy, silent, replaceExact, upMinor, upMajor, assumeYes, clean, includeDev, dryRun, filteredArgs } = parseArguments();
+  const { useExact, onlyTrivy, silent, replaceExact, upMinor, upMajor, assumeYes, clean, includeDev, dryRun, audit, filteredArgs } = parseArguments();
   
   setSilentMode(silent);
   setAssumeYes(assumeYes);
@@ -44,6 +44,12 @@ async function main() {
   }
   
   try {
+    // Handle audit mode (read-only vulnerability listing)
+    if (audit) {
+      await runAuditMode();
+      return; // Exit after audit
+    }
+    
     // Handle clean mode
     if (clean) {
       await runCleanMode(pkgJson, includeDev);
