@@ -10,6 +10,7 @@ const { readPackageJson } = require('../lib/package-manager');
 const { parseArguments, parsePackagePatterns, matchPackages } = require('../lib/cli-parser');
 const { runTrivyMode, runNormalMode, runCleanMode, runAuditMode } = require('../lib/modes');
 const { replaceWithExactVersions, updateToMinorVersions, updateToMajorVersions } = require('../lib/version-manager');
+const { t } = require('../lib/i18n');
 
 // ============================================================================
 // MAIN
@@ -17,73 +18,73 @@ const { replaceWithExactVersions, updateToMinorVersions, updateToMajorVersions }
 
 async function main() {
   const { useExact, onlyTrivy, silent, replaceExact, upMinor, upMajor, assumeYes, clean, includeDev, dryRun, audit, filteredArgs } = parseArguments();
-  
+
   setSilentMode(silent);
   setAssumeYes(assumeYes);
   setDryRun(dryRun);
-  
+
   const pkgJson = readPackageJson();
-  
+
   const deps = new Set(Object.keys(pkgJson.dependencies || {}));
   const devDeps = new Set(Object.keys(pkgJson.devDependencies || {}));
-  
+
   const processAll = !filteredArgs.length;
-  
+
   if (silent) {
-    console.log('🔇 Modo --silent activado: salida de npm suprimida');
+    console.log(t('startup.silent_mode'));
   }
   if (assumeYes) {
-    console.log('✅ Modo --yes activado: se asumirá "sí" en todas las confirmaciones');
+    console.log(t('startup.assume_yes'));
   }
   if (dryRun) {
     console.log('\n' + '='.repeat(60));
-    console.log('🎭 DRY-RUN MODE: Simulación sin ejecutar cambios reales');
+    console.log(t('startup.dryrun_banner'));
     console.log('='.repeat(60));
-    console.log('ℹ️  Se mostrará qué haría la herramienta, pero NO se ejecutará');
-    console.log('ℹ️  Para ejecutar los cambios, quita el flag --dry-run\n');
+    console.log(t('startup.dryrun_info1'));
+    console.log(t('startup.dryrun_info2') + '\n');
   }
-  
+
   try {
     // Handle audit mode (read-only vulnerability listing)
     if (audit) {
       await runAuditMode();
-      return; // Exit after audit
+      return;
     }
-    
+
     // Handle clean mode
     if (clean) {
       await runCleanMode(pkgJson, includeDev);
-      return; // Exit after cleaning
+      return;
     }
-    
+
     // Handle version management modes
     if (replaceExact || upMinor || upMajor) {
       const patterns = parsePackagePatterns(filteredArgs);
       const allNames = [...deps, ...devDeps];
       const matched = matchPackages(patterns, allNames);
-      
+
       if (replaceExact) {
-        console.log('📌 Modo --replace-exact activado');
+        console.log(t('startup.mode_replace_exact'));
         if (!processAll) {
-          console.log(`   Procesando: ${[...matched].join(', ')}`);
+          console.log(t('startup.processing_packages', { packages: [...matched].join(', ') }));
         } else {
-          console.log('   Procesando todas las dependencias');
+          console.log(t('startup.processing_all'));
         }
         await replaceWithExactVersions(matched, deps, devDeps);
       } else if (upMinor) {
-        console.log('🔼 Modo --up-minor activado: actualizando a últimas versiones minor');
+        console.log(t('startup.mode_up_minor'));
         if (!processAll) {
-          console.log(`   Procesando: ${[...matched].join(', ')}`);
+          console.log(t('startup.processing_packages', { packages: [...matched].join(', ') }));
         } else {
-          console.log('   Procesando todas las dependencias');
+          console.log(t('startup.processing_all'));
         }
         await updateToMinorVersions(matched, deps, devDeps);
       } else if (upMajor) {
-        console.log('⚠️  Modo --up-major activado: actualizando a últimas versiones major');
+        console.log(t('startup.mode_up_major'));
         if (!processAll) {
-          console.log(`   Procesando: ${[...matched].join(', ')}`);
+          console.log(t('startup.processing_packages', { packages: [...matched].join(', ') }));
         } else {
-          console.log('   Procesando todas las dependencias');
+          console.log(t('startup.processing_all'));
         }
         await updateToMajorVersions(matched, deps, devDeps);
       }
@@ -91,38 +92,38 @@ async function main() {
     // Handle Trivy mode
     else if (onlyTrivy) {
       if (useExact) {
-        console.log('🎯 Modo --exact activado: se instalarán versiones exactas sin ^');
+        console.log(t('startup.mode_exact'));
       }
-      console.log('🔍 Modo --trivy activado: solo análisis y corrección de CVEs con Trivy');
-      
+      console.log(t('startup.mode_trivy'));
+
       await runTrivyMode(useExact, deps, devDeps);
     }
     // Handle normal mode
     else {
       if (processAll) {
-        console.log('No se especificaron librerías. Procesando todas las dependencias...');
+        console.log(t('startup.no_libs'));
       }
       if (useExact) {
-        console.log('🎯 Modo --exact activado: se instalarán versiones exactas sin ^');
+        console.log(t('startup.mode_exact'));
       }
-      
+
       const patterns = parsePackagePatterns(filteredArgs);
       const allNames = [...deps, ...devDeps];
       const matched = matchPackages(patterns, allNames);
-      
+
       await runNormalMode(matched, deps, devDeps, useExact, processAll);
     }
-    
+
     displayChangeSummary();
-    
+
     if (dryRun) {
       console.log('\n' + '='.repeat(60));
-      console.log('🎭 DRY-RUN COMPLETADO');
+      console.log(t('startup.dryrun_complete'));
       console.log('='.repeat(60));
-      console.log('✅ Simulación finalizada. Ningún cambio fue aplicado.');
-      console.log('💡 Para ejecutar estos cambios, ejecuta el mismo comando sin --dry-run\n');
+      console.log(t('startup.dryrun_done1'));
+      console.log(t('startup.dryrun_done2') + '\n');
     } else {
-      console.log('\nListo. Paquetes procesados.');
+      console.log(t('startup.done'));
     }
   } catch (err) {
     die(err.message || String(err));
