@@ -71,9 +71,6 @@ async function main() {
     }
     // Handle Trivy mode
     else if (onlyTrivy) {
-      if (processAll && !onlyTrivy) {
-        console.log('No se especificaron librerías. Procesando todas las dependencias...');
-      }
       if (useExact) {
         console.log('🎯 Modo --exact activado: se instalarán versiones exactas sin ^');
       }
