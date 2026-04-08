@@ -91,7 +91,13 @@ async function runWorkspaceLogic({ useExact, onlyTrivy, silent, replaceExact, up
 
 async function main() {
   const options = parseArguments();
-  const { silent, assumeYes, dryRun, isRecursive } = options;
+  const { silent, assumeYes, dryRun, isRecursive, printVersion } = options;
+
+  if (printVersion) {
+    const pkg = require('../package.json');
+    console.log(`v${pkg.version}`);
+    process.exit(0);
+  }
 
   setSilentMode(silent);
   setAssumeYes(assumeYes);

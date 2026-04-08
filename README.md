@@ -165,6 +165,7 @@ The `--clean` mode:
 - `--dry-run`: Simulation mode: shows what changes would be made without executing them (safe preview)
 - `--silent`: Suppresses npm output, shows only script messages
 - `--yes` / `-y` / `--force`: No confirmations, assumes "yes" to all (useful for CI/CD)
+- `--version` / `-v`: Prints the current installed version of Auditer
 
 ### Installation
 - `--exact`: Installs exact versions without the `^` prefix
