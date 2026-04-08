@@ -1,6 +1,6 @@
 {
   "name": "auditer",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "CLI to audit and fix vulnerabilities in Node.js projects with Trivy and npm audit",
   "bin": {
     "auditer": "bin/auditer.js"
@@ -9,7 +9,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage"
   },
-  "author": "",
+  "author": "Rodrigo Aguiluz",
   "license": "MIT",
   "engines": {
     "node": ">=12"
