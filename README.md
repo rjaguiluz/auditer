@@ -1,36 +1,37 @@
 # Auditer 🔍
 
-CLI inteligente para auditar y corregir vulnerabilidades en proyectos Node.js usando Trivy y npm audit.
+Smart CLI to audit and fix vulnerabilities in Node.js projects using Trivy and npm audit.
 
-## Características ✨
+## Features ✨
 
-- 🔍 **Análisis con Trivy**: Detecta CVEs (LOW, MEDIUM, HIGH, CRITICAL) en dependencias
-- 📋 **Modo --audit**: Lista vulnerabilidades sin modificar nada (solo lectura con árbol de dependencias)
-- 🎯 **Selección inteligente de versiones**: Prioriza actualizaciones menores (patch > minor > major)
-- 📦 **Actualización de dependencias directas**: Reinstala con versiones parcheadas
-- 📝 **Overrides para subdependencias**: Aplica parches a dependencias transitivas
-- ⚠️ **Confirmación interactiva**: Pregunta antes de aplicar overrides que puedan romper código
-- 🎯 **Modo --exact**: Instala versiones exactas sin `^`
-- 🔬 **Modo --trivy**: Solo análisis y corrección de CVEs (sin tocar otros paquetes)
-- 🧹 **Modo --clean**: Detecta y elimina dependencias no utilizadas
-- 🔇 **Modo --silent**: Suprime salida de npm para output limpio
-- 🔧 **Gestión de versiones**: --replace-exact, --up-minor, --up-major
-- 📊 **Resumen automático**: Muestra reporte conciso de todos los cambios realizados
-- 🗂️ **Arquitectura modular**: Código organizado en módulos independientes y testeables
+- 🔍 **Trivy Analysis**: Detects CVEs (LOW, MEDIUM, HIGH, CRITICAL) in dependencies
+- 📋 **--audit mode**: Lists vulnerabilities without modifying anything (read-only with dependency tree)
+- 🎯 **Smart version selection**: Prioritizes minor updates (patch > minor > major)
+- 📦 **Direct dependency updates**: Reinstalls with patched versions
+- 📝 **Overrides for sub-dependencies**: Applies patches to transitive dependencies
+- ⚠️ **Interactive confirmation**: Asks before applying overrides that may break code
+- 🎯 **--exact mode**: Installs exact versions without `^`
+- 🔬 **--trivy mode**: Only CVE analysis and fixes (leaves other packages untouched)
+- 🧹 **--clean mode**: Detects and removes unused dependencies
+- 🔇 **--silent mode**: Suppresses npm output for cleaner logs
+- 🔧 **Version management**: --replace-exact, --up-minor, --up-major
+- 📊 **Auto summary**: Shows a concise report of all changes made
+- 🗂️ **Modular architecture**: Code organized in independent, testable modules
+- 🌐 **i18n support**: Output in English or Spanish based on system locale
 
-## Instalación 📥
+## Installation 📥
 
 ```bash
-# Desde el directorio del proyecto
+# From the project directory
 npm install -g .
 
-# O durante desarrollo
+# Or during development
 npm link
 ```
 
-## Prerequisitos
+## Prerequisites
 
-Para el análisis completo de CVEs, instala Trivy:
+For full CVE analysis, install Trivy:
 
 ```bash
 # macOS
@@ -39,320 +40,321 @@ brew install trivy
 # Linux (Debian/Ubuntu)
 sudo apt-get install trivy
 
-# O con script universal
+# Or with the universal script
 curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
 ```
 
-## Uso 🚀
+## Usage 🚀
 
-### Modo básico: Procesar librerías específicas
+### Basic mode: Process specific libraries
 
 ```bash
-# Librerías explícitas
+# Explicit libraries
 auditer react lodash
 
-# Con regex (expresiones entre /)
+# With regex (expressions between /)
 auditer '/^@babel/' '/^eslint-/'
 
-# Todas las dependencias
+# All dependencies
 auditer
 
-# Con versiones exactas (sin ^)
+# With exact versions (no ^)
 auditer --exact react webpack
 ```
 
-### Modo Trivy: Solo análisis de vulnerabilidades
+### Trivy mode: Only vulnerability analysis
 
 ```bash
-# Analiza con Trivy y corrige solo paquetes vulnerables
+# Analyze with Trivy and fix only vulnerable packages
 auditer --trivy
 
-# Con versiones exactas
+# With exact versions
 auditer --trivy --exact
 ```
 
-### Gestión de versiones
+### Version management
 
 ```bash
-# Reemplazar versiones con formato exacto (quitar ^, ~)
+# Replace versions with exact format (remove ^, ~)
 auditer --replace-exact
-auditer --replace-exact express lodash  # Solo paquetes específicos
-auditer --replace-exact '/^@babel/'     # Con regex
+auditer --replace-exact express lodash  # Specific packages only
+auditer --replace-exact '/^@babel/'     # With regex
 
-# Actualizar a últimas versiones minor compatibles (mantiene major)
+# Update to latest compatible minor versions (keeps major)
 auditer --up-minor
-auditer --up-minor react webpack        # Solo paquetes específicos
+auditer --up-minor react webpack        # Specific packages only
 
-# Actualizar a últimas versiones major (⚠️ breaking changes)
+# Update to latest major versions (⚠️ breaking changes)
 auditer --up-major
-auditer --up-major lodash moment        # Solo paquetes específicos
+auditer --up-major lodash moment        # Specific packages only
 ```
 
-### Limpieza de dependencias no utilizadas
+### Cleaning unused dependencies
 
 ```bash
-# Detectar y eliminar dependencias no utilizadas (solo producción)
+# Detect and remove unused dependencies (production only)
 auditer --clean
 
-# Incluir también devDependencies en el análisis (⚠️ puede tener falsos positivos)
+# Also include devDependencies in analysis (⚠️ may have false positives)
 auditer --clean --include-dev
 ```
 
-El modo `--clean`:
-- Escanea todos los archivos del proyecto (`.js`, `.jsx`, `.ts`, `.tsx`)
-- Detecta qué paquetes realmente se importan o requieren
-- **Por defecto solo analiza `dependencies` de producción**
-- **Excluye `devDependencies`** (typescript, jest, eslint, etc. no se importan directamente)
-- **Excluye automáticamente paquetes `@types/*`** (son de tipos, no de código)
-- Muestra un listado de dependencias no utilizadas
-- Te pregunta antes de eliminarlas
+The `--clean` mode:
+- Recursively scans all project files (`.js`, `.jsx`, `.ts`, `.tsx`)
+- Detects which packages are actually imported or required
+- **By default only analyzes production `dependencies`**
+- **Excludes `devDependencies`** (typescript, jest, eslint, etc. are not directly imported)
+- **Automatically excludes `@types/*` packages** (they are type-only, not runtime code)
+- Lists unused dependencies
+- Asks before removing them
 
-**Usar `--include-dev` con precaución**: Las devDependencies incluyen herramientas CLI (typescript, jest, eslint) que no se importan en el código pero se usan en scripts de package.json y archivos de configuración. El análisis estático puede generar falsos positivos.
+**Use `--include-dev` with caution**: devDependencies include CLI tools (typescript, jest, eslint) that are not imported in code but are used in package.json scripts and config files. Static analysis may produce false positives.
 
-**Nota**: Este análisis es estático y puede tener falsos positivos si usas imports dinámicos complejos o dependencias que solo se usan en configuración.
+**Note**: This is static analysis and may have false positives if you use complex dynamic imports or dependencies only used in configuration.
 
-## Flujos de trabajo 🔄
+## Workflows 🔄
 
-### Modo normal (`auditer <paquetes>`)
+### Normal mode (`auditer <packages>`)
 
-1. Desinstala los paquetes especificados
-2. Ejecuta `npm audit fix`
-3. Reinstala los paquetes
-4. Escanea con Trivy
-5. Actualiza dependencias directas vulnerables
-6. Propone overrides para subdependencias (con confirmación)
-7. Verifica resultado final
+1. Uninstalls the specified packages
+2. Runs `npm audit fix`
+3. Reinstalls the packages
+4. Scans with Trivy
+5. Updates vulnerable direct dependencies
+6. Proposes overrides for sub-dependencies (with confirmation)
+7. Verifies final result
 
-### Modo Trivy (`auditer --trivy`)
+### Trivy mode (`auditer --trivy`)
 
-1. Escanea con Trivy primero
-2. Identifica paquetes vulnerables (directos y transitivos)
-3. Desinstala/reinstala solo dependencias directas vulnerables con versiones parcheadas
-4. Ejecuta `npm audit fix`
-5. Propone overrides solo para subdependencias (con confirmación)
-6. Verifica resultado final
+1. Scans with Trivy first
+2. Identifies vulnerable packages (direct and transitive)
+3. Uninstalls/reinstalls only vulnerable direct dependencies with patched versions
+4. Runs `npm audit fix`
+5. Proposes overrides for sub-dependencies only (with confirmation)
+6. Verifies final result
 
-### Modo Audit (`auditer --audit`)
+### Audit mode (`auditer --audit`)
 
-1. Escanea con Trivy (solo lectura)
-2. Lista cada paquete vulnerable con su información
-3. Muestra árbol de dependencias con `npm list`
-4. Agrupa vulnerabilidades por severidad (CRITICAL, HIGH, MEDIUM, LOW)
-5. Muestra resumen con contadores
-6. **No modifica nada** - ideal para reportes e inspección
+1. Scans with Trivy (read-only)
+2. Lists each vulnerable package with its information
+3. Shows dependency tree with `npm list`
+4. Groups vulnerabilities by severity (CRITICAL, HIGH, MEDIUM, LOW)
+5. Shows summary with counters
+6. **Does not modify anything** — ideal for reports and inspection
 
-### Modo Clean (`auditer --clean`)
+### Clean mode (`auditer --clean`)
 
-1. Escanea recursivamente todos los archivos del proyecto
-2. Detecta imports/requires en el código fuente
-3. Compara con dependencies en package.json (devDependencies excluidas por defecto)
-4. Lista paquetes no utilizados (excluyendo @types/*)
-5. Pregunta si deseas eliminarlos
-6. Desinstala los paquetes confirmados
+1. Recursively scans all project files
+2. Detects imports/requires in source code
+3. Compares with dependencies in package.json (devDependencies excluded by default)
+4. Lists unused packages (excluding @types/*)
+5. Asks if you want to remove them
+6. Uninstalls confirmed packages
 
-**Nota**: Por defecto solo analiza `dependencies` de producción. Las `devDependencies` (typescript, jest, eslint, prettier, etc.) se excluyen porque son herramientas CLI que no se importan directamente. Usa `--include-dev` si deseas incluirlas (puede generar falsos positivos).
+**Note**: By default only analyzes production `dependencies`. `devDependencies` (typescript, jest, eslint, prettier, etc.) are excluded because they are CLI tools that are not directly imported. Use `--include-dev` if you want to include them (may produce false positives).
 
-## Flags disponibles 🎛️
+## Available flags 🎛️
 
-### Modos de ejecución
-- `--audit`: Modo auditoría: lista vulnerabilidades sin modificar (solo lectura con árbol de dependencias)
-- `--trivy`: Modo análisis: solo procesa paquetes con CVEs detectados por Trivy
-- `--clean`: Modo limpieza: detecta y elimina dependencias de producción no utilizadas
-- `--include-dev`: Incluye devDependencies en el análisis --clean (⚠️ puede tener falsos positivos)
-- `--dry-run`: Modo simulación: muestra qué cambios haría sin ejecutarlos (preview seguro)
-- `--silent`: Suprime la salida de npm, muestra solo mensajes del script
-- `--yes` / `-y` / `--force`: No pide confirmaciones, asume "sí" en todas (útil para CI/CD)
+### Execution modes
+- `--audit`: Audit mode: lists vulnerabilities without modifying (read-only with dependency tree)
+- `--trivy`: Analysis mode: only processes packages with CVEs detected by Trivy
+- `--clean`: Clean mode: detects and removes unused production dependencies
+- `--include-dev`: Includes devDependencies in the --clean analysis (⚠️ may have false positives)
+- `--dry-run`: Simulation mode: shows what changes would be made without executing them (safe preview)
+- `--silent`: Suppresses npm output, shows only script messages
+- `--yes` / `-y` / `--force`: No confirmations, assumes "yes" to all (useful for CI/CD)
 
-### Instalación
-- `--exact`: Instala versiones exactas sin el prefijo `^`
+### Installation
+- `--exact`: Installs exact versions without the `^` prefix
 
-### Gestión de versiones
-- `--replace-exact`: Reemplaza versiones ^x.x.x por x.x.x (sin modificar package-lock)
-- `--up-minor`: Actualiza a la última versión minor compatible (mantiene major)
-- `--up-major`: Actualiza a la última versión disponible (⚠️ puede romper código)
+### Version management
+- `--replace-exact`: Replaces ^x.x.x versions with x.x.x (without modifying package-lock)
+- `--up-minor`: Updates to the latest compatible minor version (keeps major)
+- `--up-major`: Updates to the latest available version (⚠️ may break code)
 
-## Ejemplos 💡
+## Examples 💡
 
 ```bash
-# Actualizar React y todas sus dependencias
+# Update React and all its dependencies
 auditer react
 
-# Procesar todos los paquetes de Babel
+# Process all Babel packages
 auditer '/^@babel/'
 
-# 📋 Auditoría de vulnerabilidades (solo lectura - no modifica nada)
+# 📋 Vulnerability audit (read-only - does not modify anything)
 auditer --audit
 
-# Análisis de seguridad completo
+# Full security analysis
 auditer --trivy
 
-# 🎭 Ver qué haría el análisis de seguridad SIN ejecutarlo (preview seguro)
+# 🎭 See what the security analysis would do WITHOUT executing it (safe preview)
 auditer --trivy --dry-run
 
-# Limpiar dependencias no utilizadas
+# Clean unused dependencies
 auditer --clean
 
-# 🎭 Ver qué dependencias eliminaría sin borrarlas
+# 🎭 See what dependencies would be removed without deleting them
 auditer --clean --dry-run
 
-# Limpiar incluyendo devDependencies (⚠️ cuidado con falsos positivos)
+# Clean including devDependencies (⚠️ beware of false positives)
 auditer --clean --include-dev
 
-# Modo no interactivo
+# Non-interactive mode
 auditer --clean --yes
 
-# Reinstalar todo con versiones exactas
+# Reinstall everything with exact versions
 auditer --exact
 
-# Análisis de seguridad + versiones exactas
+# Security analysis + exact versions
 auditer --trivy --exact
 
-# Modo silencioso (sin output de npm)
+# Silent mode (no npm output)
 auditer --silent --trivy
 
-# Modo no interactivo (sin confirmaciones) - útil para CI/CD
+# Non-interactive mode (no confirmations) - useful for CI/CD
 auditer --trivy --yes
 auditer --trivy -y --silent
-auditer --clean --yes  # Eliminar dependencias sin confirmar
+auditer --clean --yes  # Remove dependencies without confirmation
 
-# 🎭 Ver qué actualizaciones major haría (breaking changes) sin ejecutarlas
+# 🎭 See what major updates would be made (breaking changes) without executing them
 auditer --up-major --dry-run
 
-# 🎭 Previsualizar análisis en modo silencioso
+# 🎭 Preview analysis in silent mode
 auditer --trivy --silent --dry-run
 
-# Actualizar familia de paquetes sin confirmaciones
+# Update package family without confirmations
 auditer '/^@nestjs/' --yes
 
-# 🎭 CI/CD: Verificar vulnerabilidades sin arreglarlas (para reportes)
-auditer --trivy --dry-run || echo "⚠️ Vulnerabilidades detectadas"
+# 🎭 CI/CD: Check vulnerabilities without fixing them (for reports)
+auditer --trivy --dry-run || echo "⚠️ Vulnerabilities detected"
 
-# Combinando todos los flags
+# Combining all flags
 auditer --trivy --exact --silent --yes
 ```
 
-### Casos de uso de --audit
+### --audit use cases
 
-**1. Informe de seguridad sin modificar:**
+**1. Security report without changes:**
 ```bash
-# Generar reporte de vulnerabilidades para reunión
+# Generate vulnerability report for a meeting
 auditer --audit > security-report.txt
 ```
 
-**2. Inspeccionar antes de arreglar:**
+**2. Inspect before fixing:**
 ```bash
-# Ver el alcance del problema antes de ejecutar correcciones
+# See the extent of the problem before running fixes
 auditer --audit
-# Después: auditer --trivy
+# Then: auditer --trivy
 ```
 
-**3. CI/CD - Reportes de seguridad:**
+**3. CI/CD - Security reports:**
 ```bash
-# En pipeline: verificar vulnerabilidades y guardar reporte
-auditer --audit || true  # No falla el build, solo reporta
+# In pipeline: check vulnerabilities and save report
+auditer --audit || true  # Does not fail the build, only reports
 ```
 
-**4. Debugging de dependencias:**
+**4. Dependency debugging:**
 ```bash
-# Ver árbol completo de dependencias de paquetes vulnerables
+# See full dependency tree for vulnerable packages
 auditer --audit | grep -A 10 "path-to-regexp"
 ```
 
-### Casos de uso de --dry-run
+### --dry-run use cases
 
-**1. Explorar proyecto nuevo:**
+**1. Explore a new project:**
 ```bash
-cd nuevo-proyecto
+cd new-project
 auditer --trivy --dry-run
-# Ver qué vulnerabilidades tiene sin tocar nada
+# See what vulnerabilities it has without touching anything
 ```
 
-**2. Comparar estrategias:**
+**2. Compare strategies:**
 ```bash
 auditer --up-minor --dry-run > minor-changes.txt
 auditer --up-major --dry-run > major-changes.txt
-# Comparar archivos y decidir
+# Compare files and decide
 ```
 
-**3. Validación en CI/CD:**
+**3. CI/CD validation:**
 ```bash
-# Fallar build si hay vulnerabilidades HIGH/CRITICAL
+# Fail build if there are HIGH/CRITICAL vulnerabilities
 auditer --trivy --dry-run
 ```
 
 ## Overrides 📝
 
-Los overrides se usan **solo para subdependencias** (dependencias transitivas que no están en tu `package.json`).
-Para verificar si un paquete es subdependencia:
+Overrides are used **only for sub-dependencies** (transitive dependencies not in your `package.json`).
+To check if a package is a sub-dependency:
 
 ```bash
-npm list <nombre-paquete>
+npm list <package-name>
 ```
 
-El CLI te pedirá confirmación antes de aplicar overrides ya que pueden causar incompatibilidades.
+The CLI will ask for confirmation before applying overrides since they can cause incompatibilities.
 
-## Resumen de cambios 📊
+## Change summary 📊
 
-Al finalizar, Auditer mostrará un resumen conciso de todos los cambios realizados:
+When finished, Auditer will show a concise summary of all changes made:
 
 ```
 ============================================================
-📊 RESUMEN DE CAMBIOS
+📊 CHANGE SUMMARY
 ============================================================
 
-✅ Dependencias actualizadas:
+✅ Updated dependencies:
    lodash: 4.17.21 → 4.18.0 [prod]
    webpack: 5.88.0 → 5.95.0 [dev]
 
-📝 Overrides aplicados (subdependencias):
+📝 Applied overrides (subdependencies):
    micromatch: 4.0.5 → 4.0.8
    ws: 8.17.0 → 8.18.0
 
-🗑️  Overrides removidos:
+🗑️  Removed overrides:
    old-package
 
 ============================================================
 ```
 
-Este resumen te permite ver de un vistazo todos los cambios de versión realizados.
+This summary lets you see at a glance all version changes made.
 
-## Notas importantes ⚠️
+## Important notes ⚠️
 
-- Ejecuta siempre desde la raíz del proyecto (donde está `package.json`)
-- Las dependencias directas se actualizan en `package.json`
-- Las subdependencias se parchean vía campo `overrides`
-- Prueba tu aplicación después de aplicar overrides
-- Sin Trivy instalado, solo usará `npm audit`
+- Always run from the project root (where `package.json` is)
+- Direct dependencies are updated in `package.json`
+- Sub-dependencies are patched via the `overrides` field
+- Test your application after applying overrides
+- Without Trivy installed, only `npm audit` will be used
 
-## Arquitectura 🏗️
+## Architecture 🏗️
 
-El proyecto está organizado en módulos independientes para mejor mantenibilidad:
+The project is organized in independent modules for better maintainability:
 
 ```
 auditer/
 ├── bin/
-│   └── auditer.js              # Entry point (~110 líneas)
+│   └── auditer.js              # Entry point (~110 lines)
 └── lib/
-    ├── constants.js            # Constantes del proyecto
-    ├── state.js                # Estado global
-    ├── utils.js                # Funciones utilitarias
-    ├── package-manager.js      # Operaciones con package.json
-    ├── version-utils.js        # Comparación de versiones
-    ├── dependency-analyzer.js  # Análisis de dependencias
-    ├── trivy.js                # Integración con Trivy
-    ├── package-processor.js    # Instalación/desinstalación
-    ├── cli-parser.js           # Parser de argumentos CLI
-    ├── vulnerability-fixer.js  # Corrección de vulnerabilidades
-    ├── version-manager.js      # Gestión de versiones
-    └── modes.js                # Modos de ejecución
+    ├── constants.js            # Project constants
+    ├── state.js                # Global state
+    ├── utils.js                # Utility functions
+    ├── i18n.js                 # Internationalization (EN/ES)
+    ├── package-manager.js      # package.json operations
+    ├── version-utils.js        # Version comparison
+    ├── dependency-analyzer.js  # Dependency analysis
+    ├── trivy.js                # Trivy integration
+    ├── package-processor.js    # Install/uninstall
+    ├── cli-parser.js           # CLI argument parser
+    ├── vulnerability-fixer.js  # Vulnerability fixing
+    ├── version-manager.js      # Version management
+    └── modes.js                # Execution modes
 ```
 
-Ver [ARCHITECTURE.md](./ARCHITECTURE.md) para detalles completos de la arquitectura.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for full architecture details.
 
-### Ventajas de la modularización
+### Advantages of modularization
 
-- ✅ **Código organizado**: Cada módulo tiene responsabilidades claras
-- ✅ **Fácil de testear**: Módulos independientes y testeables
-- ✅ **Reutilizable**: Funciones compartidas entre diferentes modos
-- ✅ **Mantenible**: Archivos pequeños (~50-200 líneas cada uno)
-- ✅ **Escalable**: Fácil agregar nuevas funcionalidades
+- ✅ **Organized code**: Each module has clear responsibilities
+- ✅ **Easy to test**: Independent, testable modules
+- ✅ **Reusable**: Shared functions across different modes
+- ✅ **Maintainable**: Small files (~50-200 lines each)
+- ✅ **Scalable**: Easy to add new features

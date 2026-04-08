@@ -1,219 +1,220 @@
-# Revisión Exhaustiva de Flujos - Auditer
+# Auditer — Exhaustive Flow Review
 
-## ✅ FLUJO 1: Version Management (--replace-exact, --up-minor, --up-major)
+## ✅ FLOW 1: Version Management (--replace-exact, --up-minor, --up-major)
 
-### Entrada
+### Input
 ```bash
-auditer --replace-exact [paquetes]
-auditer --up-minor [paquetes]
-auditer --up-major [paquetes]
+auditer --replace-exact [packages]
+auditer --up-minor [packages]
+auditer --up-major [packages]
 ```
 
-### Flujo
-1. **parseArguments()** detecta el flag activo
-2. **parsePackagePatterns()** procesa paquetes/regex
-3. **matchPackages()** encuentra coincidencias en package.json
-4. Si `filteredArgs` vacío → `matched` vacío → se procesan TODOS
-5. Ejecuta función correspondiente:
-   - `replaceWithExactVersions()`: Quita ^/~ 
-   - `updateToMinorVersions()`: Busca última minor compatible
-   - `updateToMajorVersions()`: Busca última versión (con confirmación)
-6. **displayChangeSummary()** muestra cambios
-7. **FIN** ✅
+### Flow
+1. **parseArguments()** detects the active flag
+2. **parsePackagePatterns()** processes packages/regex
+3. **matchPackages()** finds matches in package.json
+4. If `filteredArgs` is empty → `matched` is empty → **all packages are processed**
+5. Executes the corresponding function:
+   - `replaceWithExactVersions()`: Removes ^/~
+   - `updateToMinorVersions()`: Finds latest compatible minor
+   - `updateToMajorVersions()`: Finds latest version (with confirmation)
+6. **displayChangeSummary()** shows changes
+7. **END** ✅
 
-### Casos Edge
-- ✅ Sin paquetes especificados → procesa todos
-- ✅ Paquetes ya sin prefijo → no hace cambios  
-- ✅ --up-major pide confirmación antes de proceder
-- ✅ Paquete no encontrado en npm → ignora con mensaje
+### Edge Cases
+- ✅ No packages specified → processes all
+- ✅ Packages already without prefix → no changes made
+- ✅ --up-major asks for confirmation before proceeding
+- ✅ Package not found on npm → skipped with message
+- ✅ --dry-run: does NOT write package.json (guarded with getDryRun())
 
 ---
 
-## ✅ FLUJO 2: Trivy Mode (--trivy)
+## ✅ FLOW 2: Trivy Mode (--trivy)
 
-### Entrada  
+### Input
 ```bash
 auditer --trivy [--exact]
 ```
 
-### Flujo
-1. **runTrivyMode()** inicia
-2. **runTrivyScan()** ejecuta Trivy
-   - Si Trivy no instalado → **die()** ❌
-3. **getCurrentVersions()** lee package-lock.json
-4. **extractTrivyVulnerabilities()** parsea resultados
-   - Separa versiones múltiples: "1.2.3, 1.3.0" → ["1.2.3", "1.3.0"]
-   - **chooseClosestVersion()** elige versión más cercana
-   - Si no hay versión válida → **se omite el paquete** ✅
-5. **Clasificación por severidad** (CRITICAL, HIGH, MEDIUM, LOW)
-6. **Si solo MEDIUM/LOW** → pide confirmación al usuario
-   - Si dice NO → **FIN** ✅
-7. **Identifica dependencias directas**:
-   - Usa `isDirectDependency()` (npm list --depth=0)
-   - Verifica que esté en `deps` o `devDeps`
-   - Si directo pero NO en package.json → **trata como transitivo** ✅
-8. **Procesa dependencias directas**:
-   - Remueve overrides conflictivos
-   - Desinstala paquetes
-   - **runAuditFix()** 
-   - Reinstala con versiones parcheadas
-   - Trackea cambios en CHANGES_TRACKER
-9. **processSecondTrivyScan()** - segundo escaneo
-   - Detecta vulnerabilidades restantes
-   - Si solo MEDIUM/LOW → pide confirmación
-   - Llama a **processVulnerabilities()**
-10. **processVulnerabilities()** procesa restantes:
-    - Clasifica directo vs transitivo
-    - **Valida fixedVersion no sea null** ✅
-    - Directo sin deps/devDeps → **trata como transitivo** ✅
-    - Actualiza directas con `npm install`
-    - Aplica overrides a transitivas (con confirmación)
-11. **displayChangeSummary()** 
-12. **FIN** ✅
+### Flow
+1. **runTrivyMode()** starts
+2. **runTrivyScan()** runs Trivy
+   - If Trivy not installed → **die()** ❌
+3. **getCurrentVersions()** reads package-lock.json
+4. **extractTrivyVulnerabilities()** parses results
+   - Splits multiple versions: "1.2.3, 1.3.0" → ["1.2.3", "1.3.0"]
+   - **chooseClosestVersion()** selects the closest version
+   - If no valid version → **package is skipped** ✅
+5. **Classification by severity** (CRITICAL, HIGH, MEDIUM, LOW)
+6. **If only MEDIUM/LOW** → asks user for confirmation
+   - If user says NO → **END** ✅
+7. **Identifies direct dependencies**:
+   - Uses `isDirectDependency()` (npm list --depth=0)
+   - Verifies package is in `deps` or `devDeps`
+   - If direct but NOT in package.json → **treats as transitive** ✅
+8. **Processes direct dependencies**:
+   - Removes conflicting overrides
+   - Uninstalls packages
+   - **runAuditFix()**
+   - Reinstalls with patched versions
+   - Tracks changes in CHANGES_TRACKER
+9. **processSecondTrivyScan()** — second scan
+   - Detects remaining vulnerabilities
+   - If only MEDIUM/LOW → asks for confirmation
+   - Calls **processVulnerabilities()**
+10. **processVulnerabilities()** handles remaining:
+    - Classifies as direct vs transitive
+    - **Validates fixedVersion is not null** ✅
+    - Direct not in deps/devDeps → **treats as transitive** ✅
+    - Updates direct deps with `npm install`
+    - Applies overrides to transitive deps (with confirmation)
+11. **displayChangeSummary()**
+12. **END** ✅
 
-### Casos Edge
-- ✅ Trivy no instalado → termina con error claro
-- ✅ Sin vulnerabilidades → termina limpiamente
-- ✅ Solo MEDIUM/LOW → pide confirmación
-- ✅ Usuario cancela → respeta decisión
-- ✅ fixedVersion null → omite paquete con mensaje
-- ✅ Directo huérfano → trata como transitivo con override
-- ✅ Múltiples versiones en FixedVersion → parsea y elige mejor
+### Edge Cases
+- ✅ Trivy not installed → exits with clear error
+- ✅ No vulnerabilities → exits cleanly
+- ✅ Only MEDIUM/LOW → asks for confirmation
+- ✅ User cancels → respects decision
+- ✅ fixedVersion null → skips package with message
+- ✅ Orphan direct package → treats as transitive with override
+- ✅ Multiple versions in FixedVersion → parses and picks best
 
 ---
 
-## ✅ FLUJO 3: Normal Mode (sin flags especiales)
+## ✅ FLOW 3: Normal Mode (no special flags)
 
-### Entrada
+### Input
 ```bash
-auditer [paquetes]
-auditer  # sin paquetes = todos
+auditer [packages]
+auditer  # no packages = all
 ```
 
-### Flujo
-1. **parsePackagePatterns()** procesa paquetes/regex
-2. **matchPackages()** encuentra coincidencias
-3. Si `filteredArgs` vacío → **processAll = true**
+### Flow
+1. **parsePackagePatterns()** processes packages/regex
+2. **matchPackages()** finds matches
+3. If `filteredArgs` empty → **processAll = true**
 4. **runNormalMode()**:
-   - Si processAll → agrega TODOS a matched
-   - **Valida matched.size > 0** ✅
-   - Para cada paquete:
-     - Si está en devDeps → lista dev
-     - Si está en deps → lista prod
-     - **Si no está en ninguno → warning + ignora** ✅
-   - **Valida que haya paquetes válidos** ✅
-   - Remueve overrides conflictivos
+   - If processAll → adds ALL to matched
+   - **Validates matched.size > 0** ✅
+   - For each package:
+     - If in devDeps → dev list
+     - If in deps → prod list
+     - **If in neither → warning + ignored** ✅
+   - **Validates there are valid packages** ✅
+   - Removes conflicting overrides
    - **uninstallPackages()**
    - **runAuditFix()**
-   - **installPackages()** (con --exact si aplica)
-   - **processSecondTrivyScan()** (si Trivy disponible)
+   - **installPackages()** (with --exact if applicable)
+   - **processSecondTrivyScan()** (if Trivy available)
 5. **displayChangeSummary()**
-6. **FIN** ✅
+6. **END** ✅
 
-### Casos Edge
-- ✅ Sin paquetes → procesa todos
-- ✅ Paquete no existe → warning + ignora
-- ✅ Solo paquetes inválidos → termina con mensaje
-- ✅ matched vacío → termina sin procesar
-- ✅ Trivy no disponible → salta escaneo (no falla)
+### Edge Cases
+- ✅ No packages → processes all
+- ✅ Package does not exist → warning + ignored
+- ✅ Only invalid packages → exits with message
+- ✅ matched empty → exits without processing
+- ✅ Trivy not available → skips scan (does not fail)
 
 ---
 
-## ✅ FLUJO 4: Version Selection (chooseClosestVersion)
+## ✅ FLOW 4: Version Selection (chooseClosestVersion)
 
-### Entrada
+### Input
 ```javascript
 chooseClosestVersion("4.17.15", ["4.17.20", "4.17.21", "5.0.0"])
 ```
 
-### Lógica
-1. **Valida entrada**:
-   - Si fixVersions vacío → **return null** ✅
-2. **Sin versión actual**:
-   - Retorna la **más baja** disponible ✅
-3. **Con versión actual**:
-   - Busca versiones >= current
-   - Calcula distancia (PATCH=1, MINOR=100, MAJOR=1000)
-   - Elige la de menor distancia
-4. **Si ninguna >= current** (edge case):
-   - Retorna la **más alta** disponible ✅
-5. **NO muta el array original** (usa spread) ✅
+### Logic
+1. **Validates input**:
+   - If fixVersions empty → **return null** ✅
+2. **No current version**:
+   - Returns the **lowest** available ✅
+3. **With current version**:
+   - Finds versions >= current
+   - Calculates distance (PATCH=1, MINOR=100, MAJOR=1000)
+   - Picks the one with smallest distance
+4. **If none >= current** (edge case):
+   - Returns the **highest** available ✅
+5. **Does NOT mutate original array** (uses spread) ✅
 
-### Casos Edge
-- ✅ Array vacío → null
-- ✅ Sin currentVersion → más baja
-- ✅ Todas < current → más alta
-- ✅ Versiones con prefijos → se limpian antes
-- ✅ No muta array original
+### Edge Cases
+- ✅ Empty array → null
+- ✅ No currentVersion → lowest
+- ✅ All < current → highest
+- ✅ Versions with prefixes → stripped before comparison
+- ✅ Does not mutate original array
 
 ---
 
-## ✅ FLUJO 5: Trivy Parsing (extractTrivyVulnerabilities)
+## ✅ FLOW 5: Trivy Parsing (extractTrivyVulnerabilities)
 
-### Entrada
+### Input
 ```json
 {
   "FixedVersion": "1.2.3, 1.3.0, 2.0.0"
 }
 ```
 
-### Lógica
-1. **Verifica trivyData válido** 
-2. **Para cada vulnerabilidad**:
-   - Lee FixedVersion
-   - **Detecta comas** → split y trim ✅
-   - Agrega todas las versiones al array
-   - Trackea severidad más alta
-3. **Para cada paquete**:
-   - Si 1 versión → usa esa
-   - Si múltiples → **chooseClosestVersion()**
-   - **Si fixedVersion null → omite paquete** ✅
-4. **Organiza por severidad**
-5. Retorna `{ all: {}, bySeverity: {} }`
+### Logic
+1. **Validates trivyData**
+2. **For each vulnerability**:
+   - Reads FixedVersion
+   - **Detects commas** → split and trim ✅
+   - Adds all versions to the array
+   - Tracks highest severity
+3. **For each package**:
+   - If 1 version → use it
+   - If multiple → **chooseClosestVersion()**
+   - **If fixedVersion null → skip package** ✅
+4. **Organizes by severity**
+5. Returns `{ all: {}, bySeverity: {} }`
 
-### Casos Edge
-- ✅ trivyData null → retorna vacío
-- ✅ Sin vulnerabilidades → retorna vacío
-- ✅ Múltiples versiones separadas por comas → parsea correctamente
-- ✅ chooseClosestVersion retorna null → omite paquete
-- ✅ Versión desconocida → filtra
+### Edge Cases
+- ✅ trivyData null → returns empty
+- ✅ No vulnerabilities → returns empty
+- ✅ Multiple comma-separated versions → parsed correctly
+- ✅ chooseClosestVersion returns null → skips package
+- ✅ Unknown version → filtered out
 
 ---
 
-## ✅ FLUJO 6: Override Application (applyOverridesAfterUserConfirmation)
+## ✅ FLOW 6: Override Application (applyOverridesAfterUserConfirmation)
 
-### Entrada
+### Input
 ```javascript
 overrides = { "lodash": "4.17.21", "ws": "8.18.0" }
 ```
 
-### Lógica
-1. **Lee package.json**
-2. **Muestra overrides propuestos**
-3. **Muestra advertencia** de incompatibilidades
-4. **Pide confirmación** (Y/n)
-5. **Si usuario acepta**:
-   - Aplica overrides a package.json
-   - Trackea cambios
-   - **updateDirectDepsToMatchOverrides()** (sincroniza deps directas)
-   - Escribe package.json
+### Logic
+1. **Reads package.json**
+2. **Shows proposed overrides**
+3. **Shows incompatibility warning**
+4. **Asks for confirmation** (Y/n)
+5. **If user accepts**:
+   - Applies overrides to package.json
+   - Tracks changes
+   - **updateDirectDepsToMatchOverrides()** (syncs direct deps)
+   - Writes package.json
    - **npm install**
-   - **Verificación con Trivy** (no falla si quedan algunas)
-6. **Si usuario rechaza**:
-   - Cancela operación
-   - Muestra mensaje
+   - **Verification with Trivy** (does not fail if some remain)
+6. **If user rejects**:
+   - Cancels operation
+   - Shows message
 
-### Casos Edge
-- ✅ Overrides vacíos → no pide confirmación
-- ✅ Usuario rechaza → respeta decisión
-- ✅ Dependencias directas con mismo nombre → actualiza a versión exacta
-- ✅ Trivy falla → muestra mensaje pero no termina el script
+### Edge Cases
+- ✅ Empty overrides → confirmation not requested
+- ✅ User rejects → respects decision
+- ✅ Direct dependencies with same name → updates to exact version
+- ✅ Trivy fails → shows message but does not terminate the script
 
 ---
 
-## ✅ FLUJO 7: State Management (CHANGES_TRACKER)
+## ✅ FLOW 7: State Management (CHANGES_TRACKER)
 
-### Estructura
+### Structure
 ```javascript
 CHANGES_TRACKER = {
   directUpdates: [],   // { name, from, to, type }
@@ -223,50 +224,54 @@ CHANGES_TRACKER = {
 }
 ```
 
-### Uso
-- **runTrivyMode** → trackea cambios del primer escaneo
-- **processVulnerabilities** → trackea cambios del segundo escaneo
-- **version-manager** → trackea cambios de versiones
-- **displayChangeSummary** → muestra todo al final
-- **NO hay duplicación** porque son paquetes diferentes en cada fase ✅
+### Usage
+- **runTrivyMode** → tracks changes from the first scan
+- **processVulnerabilities** → tracks changes from the second scan
+- **version-manager** → tracks version changes
+- **displayChangeSummary** → shows everything at the end
+- **No duplication** because they are different packages in each phase ✅
 
 ---
 
-## 🎯 RESUMEN DE CORRECCIONES REALIZADAS
+## 🎯 SUMMARY OF FIXES APPLIED
 
 ### 1. **bin/auditer.js**
-- ❌ Removida condición imposible dentro del bloque version management
+- ❌ Removed impossible condition inside the version management block
 
-### 2. **lib/modes.js - runTrivyMode()**  
-- ✅ Paquetes directos sin deps/devDeps → trata como transitivos con mensaje
+### 2. **lib/modes.js - runTrivyMode()**
+- ✅ Direct packages not in deps/devDeps → treated as transitive with message
 
 ### 3. **lib/vulnerability-fixer.js - processVulnerabilities()**
-- ✅ Valida fixedVersion no sea null antes de procesar
-- ✅ Paquetes directos huérfanos → trata como transitivos con override
+- ✅ Validates fixedVersion is not null before processing
+- ✅ Orphan direct packages → treated as transitive with override
 
 ### 4. **lib/trivy.js - extractTrivyVulnerabilities()**
-- ✅ Solo agrega paquetes con fixedVersion válido (no null)
+- ✅ Only adds packages with valid fixedVersion (not null)
 
 ### 5. **lib/version-utils.js - chooseClosestVersion()**
-- ✅ No muta array original (usa spread operator)
-- ✅ Manejo robusto de casos edge
+- ✅ Does not mutate original array (uses spread operator)
+- ✅ Robust handling of edge cases
 
 ### 6. **lib/version-utils.js - findLatestMinorVersion()**
-- ✅ No muta array original (usa spread operator)
+- ✅ Does not mutate original array (uses spread operator)
+
+### 7. **lib/version-manager.js - all three functions**
+- ✅ writePackageJson() guarded with getDryRun() check
+- ✅ --dry-run no longer modifies package.json
 
 ---
 
-## ✅ TODOS LOS FLUJOS VALIDADOS
+## ✅ ALL FLOWS VALIDATED
 
-✅ **Modo Normal** - Reinstalación básica funciona correctamente  
-✅ **Modo Trivy** - Escaneo y corrección de CVEs con todas las validaciones  
-✅ **Modo Version Management** - Gestión de versiones sin problemas  
-✅ **Parser de Versiones** - Maneja múltiples versiones separadas por comas  
-✅ **Selección de Versiones** - Prioriza correctamente PATCH > MINOR > MAJOR  
-✅ **Overrides** - Aplicación con confirmación y sincronización de deps directas  
-✅ **Tracking de Cambios** - Sin duplicaciones, muestra correctamente al final  
-✅ **Manejo de Errores** - Todos los casos edge cubiertos con mensajes claros  
+✅ **Normal Mode** — Basic reinstall works correctly
+✅ **Trivy Mode** — CVE scan and fix with all validations
+✅ **Version Management** — Version management without issues
+✅ **Version Parser** — Handles multiple comma-separated versions
+✅ **Version Selection** — Correctly prioritizes PATCH > MINOR > MAJOR
+✅ **Overrides** — Applied with confirmation and direct dep sync
+✅ **Change Tracking** — No duplicates, correctly displayed at end
+✅ **Error Handling** — All edge cases covered with clear messages
 
-## 🚀 CONCLUSIÓN
+## 🚀 CONCLUSION
 
-El código está **lógicamente correcto y robusto**. Todos los flujos tienen sentido, manejan casos edge apropiadamente, y no hay condiciones imposibles o comportamientos inesperados.
+The code is **logically correct and robust**. All flows make sense, handle edge cases appropriately, and there are no impossible conditions or unexpected behaviors.

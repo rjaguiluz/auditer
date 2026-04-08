@@ -1,121 +1,133 @@
-# Estructura del Proyecto Auditer
+# Auditer Project Structure
 
-## 📁 Organización Modular
+## 📁 Modular Organization
 
-El código está organizado en módulos independientes para mejor mantenibilidad:
+The code is organized in independent modules for better maintainability:
 
 ```
 auditer/
 ├── bin/
-│   ├── auditer.js            # Entry point principal (CLI)
-│   └── auditer-backup.js     # Backup de la versión monolítica original
+│   ├── auditer.js            # Main entry point (CLI)
+│   └── auditer-backup.js     # Backup of the original monolithic version
 │
 └── lib/
-    ├── constants.js          # Constantes del proyecto
-    ├── state.js              # Estado global (silent mode, change tracker)
-    ├── utils.js              # Funciones utilitarias generales
-    ├── package-manager.js    # Operaciones con package.json
-    ├── version-utils.js      # Comparación y manejo de versiones
-    ├── dependency-analyzer.js # Análisis de dependencias (npm list)
-    ├── trivy.js              # Integración con Trivy
-    ├── package-processor.js  # Instalación/desinstalación de paquetes
-    ├── cli-parser.js         # Parser de argumentos CLI
-    ├── vulnerability-fixer.js # Corrección de vulnerabilidades
-    ├── version-manager.js    # Gestión de versiones (--replace-exact, --up-minor, --up-major)
-    └── modes.js              # Modos de ejecución (trivy, normal)
+    ├── constants.js          # Project constants
+    ├── state.js              # Global state (silent mode, change tracker)
+    ├── utils.js              # General utility functions
+    ├── i18n.js               # Internationalization (EN/ES auto-detect)
+    ├── package-manager.js    # package.json operations
+    ├── version-utils.js      # Version comparison and handling
+    ├── dependency-analyzer.js # Dependency analysis (npm list)
+    ├── trivy.js              # Trivy integration
+    ├── package-processor.js  # Package install/uninstall
+    ├── cli-parser.js         # CLI argument parser
+    ├── vulnerability-fixer.js # Vulnerability fixing
+    ├── version-manager.js    # Version management (--replace-exact, --up-minor, --up-major)
+    └── modes.js              # Execution modes (trivy, normal, clean, audit)
 ```
 
-## 📦 Módulos
+## 📦 Modules
 
 ### 🔧 bin/auditer.js
-**Entry Point Principal**
-- Punto de entrada de la aplicación
-- Orquesta la ejecución según los argumentos
-- ~110 líneas (antes: ~1179 líneas)
+**Main Entry Point**
+- Application entry point
+- Orchestrates execution based on arguments
+- ~110 lines (previously: ~1179 lines)
 
 ### 📌 lib/constants.js
-**Constantes del Proyecto**
-- `TRIVY_SEVERITIES`: Niveles de severidad escaneados
-- `TRIVY_SCAN_CMD`: Comando de escaneo Trivy
-- `VERSION_SCORE_WEIGHTS`: Pesos para comparación de versiones
+**Project Constants**
+- `TRIVY_SEVERITIES`: Scanned severity levels
+- `TRIVY_SCAN_CMD`: Trivy scan command
+- `VERSION_SCORE_WEIGHTS`: Weights for version comparison
 
 ### 🗂️ lib/state.js
-**Estado Global**
-- `SILENT_MODE`: Flag de modo silencioso
-- `CHANGES_TRACKER`: Rastreador de cambios
-  - `directUpdates`: Actualizaciones de dependencias directas
-  - `overrides`: Overrides aplicados
-  - `removed`: Overrides removidos
-  - `versionChanges`: Cambios de versión
+**Global State**
+- `SILENT_MODE`: Silent mode flag
+- `ASSUME_YES`: Auto-confirm flag
+- `DRY_RUN`: Dry-run flag
+- `CHANGES_TRACKER`: Change tracker
+  - `directUpdates`: Direct dependency updates
+  - `overrides`: Applied overrides
+  - `removed`: Removed overrides
+  - `versionChanges`: Version changes
+
+### 🌐 lib/i18n.js
+**Internationalization**
+- Auto-detects system locale via `LANG` / `LANGUAGE` / `LC_ALL`
+- Supports English (`en`) and Spanish (`es`), defaults to English
+- `t(key, params)`: Returns translated string with `{{variable}}` interpolation
+- Translation files: `locales/en.json`, `locales/es.json`
 
 ### 🛠️ lib/utils.js
-**Utilidades Generales**
-- `run()`: Ejecuta comandos npm
-- `die()`: Termina con error
-- `askUser()`: Pregunta interactiva
-- `displayChangeSummary()`: Resumen de cambios
-- `safeExecSync()`: Ejecución segura de comandos
-- `parsePackageVersion()`: Parser de paquetes con scope
+**General Utilities**
+- `run()`: Executes npm commands (dry-run aware)
+- `die()`: Terminates with error
+- `askUser()`: Interactive prompt (--yes aware)
+- `displayChangeSummary()`: Change summary
+- `safeExecSync()`: Safe command execution
+- `parsePackageVersion()`: Parser for scoped packages
 
 ### 📄 lib/package-manager.js
-**Gestión de package.json**
-- `readPackageJson()`: Lee package.json
-- `writePackageJson()`: Escribe package.json
-- `removeOverridesForPackages()`: Remueve overrides
-- `updateDirectDepsToMatchOverrides()`: Sincroniza dependencias con overrides
+**package.json Management**
+- `readPackageJson()`: Reads package.json
+- `writePackageJson()`: Writes package.json (dry-run aware)
+- `removeOverridesForPackages()`: Removes overrides
+- `updateDirectDepsToMatchOverrides()`: Syncs dependencies with overrides
 
 ### 🔢 lib/version-utils.js
-**Manejo de Versiones**
-- `parseVersion()`: Parser de versiones semánticas
-- `compareVersions()`: Comparador de versiones
-- `calculateVersionDistance()`: Calcula distancia entre versiones
-- `chooseClosestVersion()`: Elige versión más cercana
-- `stripVersionPrefix()`: Remueve ^, ~, etc.
-- `getLatestVersionFromNpm()`: Obtiene última versión de npm
-- `findLatestMinorVersion()`: Busca última versión minor compatible
+**Version Handling**
+- `parseVersion()`: Semantic version parser
+- `compareVersions()`: Version comparator
+- `calculateVersionDistance()`: Calculates distance between versions
+- `chooseClosestVersion()`: Chooses closest version (patch > minor > major)
+- `stripVersionPrefix()`: Removes ^, ~, etc.
+- `getLatestVersionFromNpm()`: Gets latest version from npm
+- `findLatestMinorVersion()`: Finds latest compatible minor version
 
 ### 🔍 lib/dependency-analyzer.js
-**Análisis de Dependencias**
-- `getCurrentVersions()`: Lee versiones de package-lock.json
-- `isDirectDependency()`: Verifica si es dependencia directa
-- `hasMultipleVersions()`: Detecta múltiples versiones
+**Dependency Analysis**
+- `getCurrentVersions()`: Reads versions from package-lock.json
+- `isDirectDependency()`: Checks if package is a direct dependency
+- `hasMultipleVersions()`: Detects multiple installed versions
 
 ### 🛡️ lib/trivy.js
-**Integración con Trivy**
-- `checkTrivyInstalled()`: Verifica instalación de Trivy
-- `runTrivyScan()`: Ejecuta escaneo de CVEs
-- `extractTrivyVulnerabilities()`: Extrae vulnerabilidades y agrupa por severidad
+**Trivy Integration**
+- `checkTrivyInstalled()`: Checks Trivy installation
+- `runTrivyScan()`: Runs CVE scan
+- `extractTrivyVulnerabilities()`: Extracts vulnerabilities and groups by severity
 
 ### 📦 lib/package-processor.js
-**Procesamiento de Paquetes**
-- `uninstallPackages()`: Desinstala paquetes
-- `runAuditFix()`: Ejecuta npm audit fix
-- `installPackages()`: Instala paquetes
+**Package Processing**
+- `uninstallPackages()`: Uninstalls packages
+- `runAuditFix()`: Runs npm audit fix
+- `installPackages()`: Installs packages
 
 ### ⌨️ lib/cli-parser.js
-**Parser de CLI**
-- `parseArguments()`: Parser de flags
-- `parsePackagePatterns()`: Parser de patrones (regex)
-- `matchPackages()`: Match de paquetes con patrones
+**CLI Parser**
+- `parseArguments()`: Flag parser
+- `parsePackagePatterns()`: Pattern parser (regex support)
+- `matchPackages()`: Matches packages against patterns
 
 ### 🔒 lib/vulnerability-fixer.js
-**Corrección de Vulnerabilidades**
-- `applyOverridesAfterUserConfirmation()`: Aplica overrides con confirmación
-- `processVulnerabilities()`: Procesa vulnerabilidades encontradas
+**Vulnerability Fixing**
+- `applyOverridesAfterUserConfirmation()`: Applies overrides with confirmation
+- `processVulnerabilities()`: Processes found vulnerabilities
 
 ### 📊 lib/version-manager.js
-**Gestión de Versiones**
-- `replaceWithExactVersions()`: Modo --replace-exact
-- `updateToMinorVersions()`: Modo --up-minor
-- `updateToMajorVersions()`: Modo --up-major
+**Version Management**
+- `replaceWithExactVersions()`: --replace-exact mode
+- `updateToMinorVersions()`: --up-minor mode
+- `updateToMajorVersions()`: --up-major mode
 
 ### ⚙️ lib/modes.js
-**Modos de Ejecución**
-- `runTrivyMode()`: Modo --trivy (escaneo de CVEs)
-- `processSecondTrivyScan()`: Segundo escaneo post-instalación
-- `runNormalMode()`: Modo normal (reinstalación)
+**Execution Modes**
+- `runTrivyMode()`: --trivy mode (CVE scan and fix)
+- `runNormalMode()`: Normal mode (reinstall)
+- `runCleanMode()`: --clean mode (remove unused deps)
+- `runAuditMode()`: --audit mode (read-only report)
+- `processSecondTrivyScan()`: Post-install second scan
 
-## 🔄 Flujo de Ejecución
+## 🔄 Execution Flow
 
 ```
 auditer.js (CLI)
@@ -132,38 +144,39 @@ readPackageJson() [package-manager]
 displayChangeSummary() [utils]
 ```
 
-## ✅ Ventajas de la Modularización
+## ✅ Advantages of Modularization
 
-1. **Mantenibilidad**: Código organizado en responsabilidades claras
-2. **Testability**: Cada módulo puede probarse independientemente
-3. **Reusabilidad**: Funciones reutilizables en diferentes contextos
-4. **Legibilidad**: Archivos pequeños (~50-200 líneas cada uno)
-5. **Escalabilidad**: Fácil agregar nuevas funcionalidades
+1. **Maintainability**: Code organized into clear responsibilities
+2. **Testability**: Each module can be tested independently
+3. **Reusability**: Functions reusable across different contexts
+4. **Readability**: Small files (~50-200 lines each)
+5. **Scalability**: Easy to add new features
 
-## 🚀 Uso
+## 🚀 Usage
 
-El uso es idéntico a la versión anterior:
+Usage is identical to the previous version:
 
 ```bash
-# Modo normal
+# Normal mode
 auditer
 
-# Modo Trivy
+# Trivy mode
 auditer --trivy
 
-# Gestión de versiones
+# Version management
 auditer --replace-exact
 auditer --up-minor
 auditer --up-major
 
-# Paquetes específicos
+# Specific packages
 auditer express lodash
 auditer --replace-exact /^@babel/
 ```
 
-## 📝 Notas
+## 📝 Notes
 
-- El archivo `bin/auditer-backup.js` contiene la versión monolítica original
-- Todos los módulos usan `module.exports` para exportar funciones
-- El estado global se maneja a través de `lib/state.js`
-- La sintaxis ha sido validada en todos los módulos
+- The `bin/auditer-backup.js` file contains the original monolithic version
+- All modules use `module.exports` to export functions
+- Global state is managed through `lib/state.js`
+- i18n is auto-initialized on module load via `lib/i18n.js`
+- Syntax has been validated across all modules
