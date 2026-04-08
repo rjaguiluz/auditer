@@ -18,6 +18,7 @@ const { execSync } = require('child_process');
 
 // Re-require after mocks
 const {
+  scanUsedDependencies,
   findUnusedDependencies,
   uninstallUnusedPackages
 } = require('../lib/dependency-scanner');
@@ -27,6 +28,61 @@ const {
 
 describe('dependency-scanner.js', () => {
   beforeEach(() => jest.clearAllMocks());
+
+  describe('scanUsedDependencies()', () => {
+    test('extracts and normalizes packages from js/ts files', () => {
+      fs.readdirSync.mockImplementation((dir) => {
+        if (dir === 'root') return ['src', 'package.json', 'node_modules'];
+        if (dir === 'root/src') return ['index.js', 'utils.ts'];
+        return [];
+      });
+      
+      fs.statSync.mockImplementation((p) => ({
+        isDirectory: () => p === 'root/src' || p === 'root/node_modules' || p === 'root',
+        isFile: () => p.endsWith('.js') || p.endsWith('.ts') || p.endsWith('.json')
+      }));
+
+      fs.readFileSync.mockImplementation((p) => {
+        if (p === 'root/src/index.js') {
+          return "import { get } from 'lodash';\nrequire('axios');\nimport('@babel/core/lib');";
+        }
+        if (p === 'root/src/utils.ts') {
+          return "import fs from 'fs';\nimport local from './local';";
+        }
+        return '';
+      });
+
+      const used = scanUsedDependencies('root');
+      expect(used.has('lodash')).toBe(true);
+      expect(used.has('axios')).toBe(true);
+      expect(used.has('@babel/core')).toBe(true);
+      
+      // built-ins and relative paths should be ignored
+      expect(used.has('fs')).toBe(false); 
+      expect(used.has('local')).toBe(false); 
+    });
+
+    test('handles directory access errors gracefully', () => {
+      fs.readdirSync.mockImplementation(() => { throw new Error('EACCES'); });
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const used = scanUsedDependencies('root');
+      expect(used.size).toBe(0);
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    test('handles file reading errors gracefully', () => {
+      fs.readdirSync.mockReturnValue(['index.js']);
+      fs.statSync.mockReturnValue({ isDirectory: () => false, isFile: () => true });
+      fs.readFileSync.mockImplementation(() => { throw new Error('ENOENT'); });
+      
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const used = scanUsedDependencies('root');
+      expect(used.size).toBe(0);
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+  });
 
   describe('findUnusedDependencies()', () => {
     const pkgJson = {

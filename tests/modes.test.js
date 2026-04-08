@@ -42,10 +42,7 @@ jest.mock('../lib/dependency-scanner', () => ({
   uninstallUnusedPackages: jest.fn(() => 0)
 }));
 jest.mock('../lib/i18n', () => ({
-  t: (key, params) => {
-    if (!params) return key;
-    return Object.entries(params).reduce((s, [k, v]) => s.replace(`{{${k}}}`, v), key);
-  }
+  t: (key, params) => params ? key + ' ' + JSON.stringify(params) : key
 }));
 
 const { run, askUser } = require('../lib/utils');
@@ -165,6 +162,33 @@ describe('modes.js', () => {
 
       expect(askUser).toHaveBeenCalled();
       expect(runAuditFix).not.toHaveBeenCalled();
+    });
+
+    test('processes second scan and scoped family updates', async () => {
+      runTrivyScan
+        .mockReturnValueOnce({ Results: [] }) // first scan
+        .mockReturnValueOnce({ Results: [] }); // second scan
+
+      extractTrivyVulnerabilities
+        .mockReturnValueOnce({
+          all: { '@babel/core': '7.20.0' },
+          bySeverity: { CRITICAL: {}, HIGH: { '@babel/core': '7.20.0' }, MEDIUM: {}, LOW: {} }
+        })
+        .mockReturnValueOnce({
+          all: {},
+          bySeverity: { CRITICAL: {}, HIGH: {}, MEDIUM: {}, LOW: {} }
+        });
+
+      getCurrentVersions.mockReturnValue({ '@babel/core': '7.10.0', '@babel/preset-env': '7.10.0' });
+      require('../lib/dependency-analyzer').isDirectDependency.mockReturnValue(true);
+      askUser.mockResolvedValue('y'); // answer yes to family updates
+
+      const localDeps = new Set(['lodash', '@babel/core', '@babel/preset-env']);
+      await runTrivyMode(false, localDeps, new Set([]));
+
+      expect(runAuditFix).toHaveBeenCalled();
+      expect(askUser).toHaveBeenCalled();
+      expect(require('../lib/utils').run).toHaveBeenCalledWith(expect.stringContaining('npm uninstall @babel/core @babel/preset-env'));
     });
   });
 

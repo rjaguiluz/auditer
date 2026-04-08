@@ -4,9 +4,7 @@ module.exports = {
   testMatch: ['**/tests/**/*.test.js'],
   collectCoverageFrom: [
     'lib/**/*.js',
-    'bin/auditer.js',
-    '!bin/auditer-backup.js',
-    '!bin/auditer-old.js'
+    '!bin/auditer*.js'
   ],
   coverageThreshold: {
     global: {
