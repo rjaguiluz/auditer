@@ -356,3 +356,18 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for full architecture details.
 - ✅ **Reusable**: Shared functions across different modes
 - ✅ **Maintainable**: Small files (~50-200 lines each)
 - ✅ **Scalable**: Easy to add new features
+
+---
+
+## ❤️ Contributors
+
+Thank you to everyone who has contributed to Auditer!
+
+[![Contributors](https://contrib.rocks/image?repo=rjaguiluz/auditer)](https://github.com/rjaguiluz/auditer/graphs/contributors)
+
+## 💰 Sponsors
+
+Support the development of Auditer!
+
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/rjaguiluz?style=for-the-badge&logo=github-sponsors)](https://github.com/sponsors/rjaguiluz)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/raguiluzm)
