@@ -1,9 +1,13 @@
 {
   "name": "auditer",
   "version": "0.1.0",
-  "description": "CLI para auditar y corregir vulnerabilidades en proyectos Node.js con Trivy y npm audit",
+  "description": "CLI to audit and fix vulnerabilities in Node.js projects with Trivy and npm audit",
   "bin": {
     "auditer": "bin/auditer.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "author": "",
   "license": "MIT",
@@ -17,5 +21,8 @@
     "trivy",
     "npm",
     "cve"
-  ]
+  ],
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
 }
