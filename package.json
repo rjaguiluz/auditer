@@ -1,7 +1,12 @@
 {
-  "name": "auditer",
+  "name": "@rjaguiluz/auditer",
   "version": "1.0.0",
   "description": "CLI to audit and fix vulnerabilities in Node.js projects with Trivy and npm audit",
+  "files": [
+    "bin",
+    "lib",
+    "locales"
+  ],
   "bin": {
     "auditer": "bin/auditer.js"
   },

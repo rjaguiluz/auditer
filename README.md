@@ -22,8 +22,10 @@ Smart CLI to audit and fix vulnerabilities in Node.js projects using Trivy and n
 ## Installation 📥
 
 ```bash
-npm install -g @raguiluzm/auditer
+npm install -g @rjaguiluz/auditer
 ```
+
+> **Note**: Even though the package is installed as `@rjaguiluz/auditer`, the executable command exposed to your terminal is just **`auditer`**.
 
 ## Prerequisites
 
