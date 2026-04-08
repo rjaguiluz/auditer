@@ -1,12 +1,21 @@
 {
   "name": "@rjaguiluz/auditer",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "CLI to audit and fix vulnerabilities in Node.js projects with Trivy and npm audit",
   "preferGlobal": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rjaguiluz/auditer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rjaguiluz/auditer/issues"
+  },
+  "homepage": "https://github.com/rjaguiluz/auditer#readme",
   "files": [
     "bin",
     "lib",
-    "locales"
+    "locales",
+    "README.md"
   ],
   "bin": {
     "auditer": "bin/auditer.js"
