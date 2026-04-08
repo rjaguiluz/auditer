@@ -106,31 +106,27 @@ describe('package-manager.js', () => {
 
   describe('updateDirectDepsToMatchOverrides()', () => {
     test('updates dependencies when overrides match', () => {
-      getDryRun.mockReturnValue(false);
       const pkg = { dependencies: { lodash: '^4.17.15' }, devDependencies: {} };
-      fs.readFileSync.mockReturnValue(JSON.stringify(pkg));
-
-      const result = updateDirectDepsToMatchOverrides({ lodash: '4.17.21' });
+      const result = updateDirectDepsToMatchOverrides(pkg, { lodash: '4.17.21' });
+      
       expect(result).toBe(true);
+      expect(pkg.dependencies.lodash).toBe('4.17.21');
     });
 
-    test('does not write file in dry-run mode', () => {
-      getDryRun.mockReturnValue(true);
-      const pkg = { dependencies: { lodash: '^4.17.15' } };
-      fs.readFileSync.mockReturnValue(JSON.stringify(pkg));
-
-      updateDirectDepsToMatchOverrides({ lodash: '4.17.21' });
-      expect(fs.writeFileSync).not.toHaveBeenCalled();
+    test('updates devDependencies when overrides match', () => {
+      const pkg = { dependencies: {}, devDependencies: { lodash: '^4.17.15' } };
+      const result = updateDirectDepsToMatchOverrides(pkg, { lodash: '4.17.21' });
+      
+      expect(result).toBe(true);
+      expect(pkg.devDependencies.lodash).toBe('4.17.21');
     });
 
     test('returns false when no deps match overrides', () => {
-      getDryRun.mockReturnValue(false);
       const pkg = { dependencies: { react: '^18.0.0' } };
-      fs.readFileSync.mockReturnValue(JSON.stringify(pkg));
-
-      const result = updateDirectDepsToMatchOverrides({ lodash: '4.17.21' });
+      const result = updateDirectDepsToMatchOverrides(pkg, { lodash: '4.17.21' });
+      
       expect(result).toBe(false);
-      expect(fs.writeFileSync).not.toHaveBeenCalled();
+      expect(pkg.dependencies.react).toBe('^18.0.0');
     });
   });
 });
